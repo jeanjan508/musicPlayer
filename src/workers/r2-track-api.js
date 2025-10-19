@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker to list tracks (MP3) and fetch corresponding lyrics (LRC)
+ * Cloudflare Worker to list tracks (FLAC) and fetch corresponding lyrics (LRC)
  * from an R2 bucket and return them as a JSON API response.
  * 
  * ENVIRONMENT VARIABLES REQUIRED:
@@ -9,7 +9,8 @@
 
 // Helper function to extract title/artist from filename (simple example)
 function parseFilename(key) {
-  const filename = key.replace(/\.(mp3|lrc)$/i, '');
+  // Updated to handle .flac and .lrc extensions
+  const filename = key.replace(/\.(flac|lrc)$/i, '');
   const parts = filename.split(' - ');
   if (parts.length === 2) {
     return { title: parts[1].trim(), artist: parts[0].trim() };
@@ -34,33 +35,35 @@ async function handleRequest(request, env) {
     const listed = await BUCKET.list();
     const keys = listed.objects.map(obj => obj.key);
 
-    const mp3Keys = keys.filter(key => key.toLowerCase().endsWith('.mp3'));
+    // Filter for FLAC files
+    const flacKeys = keys.filter(key => key.toLowerCase().endsWith('.flac'));
     
     const tracks = [];
 
-    // 2. Process each MP3 file
-    for (const mp3Key of mp3Keys) {
-      const lrcKey = mp3Key.replace(/\.mp3$/i, '.lrc');
+    // 2. Process each FLAC file
+    for (const flacKey of flacKeys) {
+      // 3. Find the corresponding LRC file
+      const lrcKey = flacKey.replace(/\.flac$/i, '.lrc');
       
-      // 3. Try to fetch the corresponding LRC file
+      // 4. Try to fetch the corresponding LRC file
       const lrcObject = await BUCKET.get(lrcKey);
       
       let lyricsContent = '';
       if (lrcObject && lrcObject.body) {
         lyricsContent = await lrcObject.text();
       } else {
-        console.warn(`LRC file not found for: ${mp3Key}`);
+        console.warn(`LRC file not found for: ${flacKey}`);
         lyricsContent = '[00:00.00]No lyrics found for this track.';
       }
 
-      // 4. Construct the track object
-      const { title, artist } = parseFilename(mp3Key);
+      // 5. Construct the track object
+      const { title, artist } = parseFilename(flacKey);
       
       tracks.push({
-        id: mp3Key, // Use key as unique ID
+        id: flacKey, // Use key as unique ID
         title: title,
         artist: artist,
-        audioUrl: `${R2_PUBLIC_URL_PREFIX}/${mp3Key}`,
+        audioUrl: `${R2_PUBLIC_URL_PREFIX}/${flacKey}`,
         lyrics: lyricsContent,
       });
     }
