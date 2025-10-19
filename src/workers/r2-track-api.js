@@ -18,12 +18,11 @@ function parseFilename(key) {
 }
 
 /**
- * @param {Request} request
- * @param {{ BUCKET: R2Bucket, R2_PUBLIC_URL_PREFIX: string }} env
- * @returns {Promise<Response>}
+ * Handles incoming requests.
  */
 async function handleRequest(request, env) {
   try {
+    // env contains the bindings (BUCKET, R2_PUBLIC_URL_PREFIX)
     const { BUCKET, R2_PUBLIC_URL_PREFIX } = env;
 
     if (!BUCKET || !R2_PUBLIC_URL_PREFIX) {
@@ -31,6 +30,7 @@ async function handleRequest(request, env) {
     }
 
     // 1. List all objects in the bucket
+    // Note: BUCKET is expected to be an R2Bucket binding provided by the Worker environment.
     const listed = await BUCKET.list();
     const keys = listed.objects.map(obj => obj.key);
 
