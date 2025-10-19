@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Track } from '@/types/music';
+import { cn } from '@/lib/utils';
 
 interface MusicPlayerControls {
   isPlaying: boolean;
@@ -54,7 +55,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   if (!track) {
     return (
-      <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-none border-t bg-card shadow-lg">
+      <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-none border-t bg-card shadow-2xl">
         <CardContent className="flex items-center justify-center p-4 h-20">
           <p className="text-muted-foreground">Select a track to start playing.</p>
         </CardContent>
@@ -63,24 +64,23 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   }
 
   return (
-    <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-none border-t bg-card shadow-lg">
+    <Card className="fixed bottom-0 left-0 right-0 z-50 rounded-none border-t bg-card shadow-2xl">
       <CardContent className="flex items-center justify-between p-4 h-20">
         
         {/* Audio Element (Hidden) */}
         <audio
           ref={audioRef}
-          // Event listeners are now managed by the hook
           preload="metadata"
         />
 
         {/* Track Info (Left) */}
-        <div className="flex items-center w-1/4 min-w-0">
-          <div className="h-12 w-12 bg-muted rounded-md mr-3 flex items-center justify-center text-muted-foreground">
-            {/* Placeholder for Album Art */}
+        <div className="flex items-center w-1/4 min-w-0 group cursor-default">
+          <div className="h-12 w-12 bg-primary/10 rounded-lg mr-3 flex items-center justify-center text-primary transition-colors group-hover:bg-primary/20">
+            {/* Placeholder for Album Art - Using a music icon */}
             <Volume2 className="h-5 w-5" />
           </div>
           <div className="truncate">
-            <p className="text-sm font-semibold truncate">{track.title}</p>
+            <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{track.title}</p>
             <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
           </div>
         </div>
@@ -89,27 +89,27 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         <div className="flex flex-col items-center w-1/2 px-4">
           
           {/* Controls */}
-          <div className="flex space-x-4 mb-2">
+          <div className="flex space-x-6 mb-2">
             {/* Skip buttons are placeholders for now */}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
               <SkipBack className="h-4 w-4" />
             </Button>
             <Button 
               variant="default" 
               size="icon" 
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full shadow-lg hover:shadow-xl transition-shadow"
               onClick={togglePlayPause}
             >
               {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
               <SkipForward className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Progress Bar */}
-          <div className="flex items-center w-full space-x-2">
-            <span className="text-xs text-muted-foreground w-10 text-right">{formatTime(currentTime)}</span>
+          <div className="flex items-center w-full space-x-3">
+            <span className="text-xs text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
             <Slider
               value={[currentTime]}
               max={duration || 0}
@@ -118,13 +118,13 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
               className="w-full cursor-pointer"
               disabled={duration === 0}
             />
-            <span className="text-xs text-muted-foreground w-10 text-left">{formatTime(duration)}</span>
+            <span className="text-xs text-muted-foreground w-8 text-left">{formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Volume Control (Right) */}
         <div className="flex items-center justify-end w-1/4 space-x-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={toggleMute}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors" onClick={toggleMute}>
             {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
           <Slider

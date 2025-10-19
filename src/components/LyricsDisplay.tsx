@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { parseLRC } from '@/lib/lrcParser';
+import { cn } from '@/lib/utils';
 
 interface LyricsDisplayProps {
   lrcContent: string;
@@ -10,7 +11,6 @@ interface LyricsDisplayProps {
 // h-64 = 256px
 const CONTAINER_HEIGHT_PX = 256; 
 // Approximate height of a lyric line (text-lg + margin/padding)
-// We enforce a fixed height for calculation accuracy.
 const LINE_HEIGHT_PX = 36; 
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }) => {
@@ -33,19 +33,14 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }
     return <div className="text-center text-muted-foreground p-4">No lyrics available.</div>;
   }
 
-  // Calculate the Y translation needed to center the active line (index * LINE_HEIGHT_PX)
-  // Center position: CONTAINER_HEIGHT_PX / 2
-  // Offset needed to center the active line: (CONTAINER_HEIGHT_PX / 2) - (LINE_HEIGHT_PX / 2)
-  const centerOffset = (CONTAINER_HEIGHT_PX / 2) - (LINE_HEIGHT_PX / 2); // 110px
+  // Calculate the Y translation needed to center the active line
+  const centerOffset = (CONTAINER_HEIGHT_PX / 2) - (LINE_HEIGHT_PX / 2);
 
   // Total translation: Shift up by the height of all preceding lines, then adjust for centering.
-  // We use a negative value for translateY to shift the content up.
   const translateY = activeIndex * LINE_HEIGHT_PX - centerOffset;
   
   const transformStyle: React.CSSProperties = {
-    // Apply the calculated translation
     transform: `translateY(${-translateY}px)`,
-    // Increased duration to 0.4s and using ease-in-out for a more noticeable buffer effect
     transition: 'transform 0.4s ease-in-out', 
   };
 
@@ -54,18 +49,19 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }
     <div className="h-64 overflow-hidden relative bg-card">
       {/* Inner container: applies the smooth vertical translation */}
       <div 
-        className="flex flex-col items-center w-full" 
+        className="flex flex-col items-center w-full py-4" // Added vertical padding to give some space at the top/bottom
         style={transformStyle}
       >
         {parsedLyrics.map((line, index) => (
           <p
             key={index}
             // Enforce fixed height for accurate calculation and centering
-            className={`font-medium px-4 text-lg text-center h-[36px] flex items-center justify-center transition-colors duration-150 whitespace-nowrap ${
+            className={cn(
+              "px-4 text-center h-[36px] flex items-center justify-center transition-all duration-300 whitespace-nowrap max-w-full",
               index === activeIndex
-                ? 'text-primary'
-                : 'text-muted-foreground opacity-70'
-            }`}
+                ? 'text-primary font-extrabold text-xl scale-105' // Enhanced active line style
+                : 'text-muted-foreground font-medium text-lg opacity-70'
+            )}
           >
             {line.text}
           </p>

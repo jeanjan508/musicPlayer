@@ -115,6 +115,7 @@ const Index: React.FC = () => {
                 tracks={tracks} 
                 onSelectTrack={handleSelectTrack} 
                 currentTrackId={currentTrack?.id || null}
+                isPlaying={playerControls.isPlaying} // Pass isPlaying state
               />
             )}
           </CardContent>
