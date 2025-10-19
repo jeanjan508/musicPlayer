@@ -8,11 +8,13 @@ import { Track } from '@/types/music';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchTracksFromR2 } from '@/api/music';
+import { showError } from '@/utils/toast';
 
 const Index = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch tracks on component mount
   useEffect(() => {
@@ -23,9 +25,11 @@ const Index = () => {
         if (fetchedTracks.length > 0) {
           setCurrentTrack(fetchedTracks[0]);
         }
-      } catch (error) {
-        console.error("Failed to fetch tracks:", error);
-        // Optionally show an error toast here
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred while fetching tracks.";
+        console.error("Failed to fetch tracks:", err);
+        setError(errorMessage);
+        showError(`Failed to load tracks: ${errorMessage}`);
       } finally {
         setIsLoading(false);
       }
@@ -53,8 +57,12 @@ const Index = () => {
       );
     }
     
+    if (error) {
+      return <p className="text-center text-destructive">Error: {error}</p>;
+    }
+
     if (tracks.length === 0) {
-      return <p className="text-center text-muted-foreground">No tracks found.</p>;
+      return <p className="text-center text-muted-foreground">No tracks found. Check your R2 bucket and Worker configuration.</p>;
     }
 
     return (
@@ -109,7 +117,7 @@ const Index = () => {
                 
                 <div className="mt-6 text-center">
                   <p className="text-sm text-muted-foreground">
-                    当前曲目列表通过模拟 API 调用加载。在实际部署中，您需要一个 Cloudflare Worker 来动态生成此列表。
+                    当前曲目列表通过 Cloudflare Worker API 动态加载。请确保您的 Worker 已部署并设置了正确的 `VITE_WORKER_API_URL` 环境变量。
                   </p>
                 </div>
               </CardContent>
