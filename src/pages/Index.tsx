@@ -1,138 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { MadeWithDyad } from "@/components/made-with-dyad";
-import MusicPlayer from '@/components/MusicPlayer';
+import React, { useState } from 'react';
+import Player from '@/components/Player';
 import LyricsDisplay from '@/components/LyricsDisplay';
-import TrackList from '@/components/TrackList';
-import { useMusicPlayer } from '@/hooks/useMusicPlayer';
-import { Track } from '@/types/music';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { fetchTracksFromR2 } from '@/api/music';
-import { showError } from '@/utils/toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const Index = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Fetch tracks on component mount
-  useEffect(() => {
-    const loadTracks = async () => {
-      try {
-        const fetchedTracks = await fetchTracksFromR2();
-        setTracks(fetchedTracks);
-        if (fetchedTracks.length > 0) {
-          setCurrentTrack(fetchedTracks[0]);
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred while fetching tracks.";
-        console.error("Failed to fetch tracks:", err);
-        setError(errorMessage);
-        showError(`Failed to load tracks: ${errorMessage}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadTracks();
-  }, []);
-  
-  // Use the custom hook to manage playback state
-  const playerControls = useMusicPlayer(currentTrack);
-  
-  const { currentTime } = playerControls;
+// Example LRC content for demonstration
+const exampleLRC = `
+[ti:Example Song]
+[ar:Example Artist]
+[al:Example Album]
+[00:01.00]Hello, this is the first line.
+[00:03.50]This is the second line, slightly longer.
+[00:06.00]And here is the third line, testing the centering.
+[00:09.00]We are now moving to the fourth line.
+[00:12.00]The fifth line continues the song flow.
+[00:15.00]Sixth line, testing smooth transition.
+[00:18.00]Seventh line, almost done with the example.
+[00:21.00]Eighth line, preparing for the end.
+[00:24.00]Ninth line, final words.
+[00:27.00]End of the song example.
+`;
 
-  const handleSelectTrack = (track: Track) => {
-    setCurrentTrack(track);
-  };
-
-  const renderTrackList = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-3">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      );
-    }
-    
-    if (error) {
-      return <p className="text-center text-destructive">Error: {error}</p>;
-    }
-
-    if (tracks.length === 0) {
-      return <p className="text-center text-muted-foreground">No tracks found. Check your R2 bucket and Worker configuration.</p>;
-    }
-
-    return (
-      <TrackList 
-        tracks={tracks} 
-        onSelectTrack={handleSelectTrack} 
-        currentTrackId={currentTrack?.id || null}
-      />
-    );
-  };
+const Index: React.FC = () => {
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <div className="min-h-screen pb-24 bg-background">
-      <div className="container mx-auto p-4 pt-8">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Cloudflare R2 Music Player (Web)
-        </h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Track List (Left Column) */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Tracks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderTrackList()}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Lyrics Display (Right Column) */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">
-                  {currentTrack ? `${currentTrack.title} - ${currentTrack.artist}` : 'No Track Selected'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {currentTrack ? (
-                  <LyricsDisplay 
-                    lrcContent={currentTrack.lyrics} 
-                    currentTime={currentTime} 
-                  />
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    Select a track from the list to view lyrics.
-                  </div>
-                )}
-                
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    当前曲目列表通过 Cloudflare Worker API 动态加载。请确保您的 Worker 已部署并设置了正确的 `VITE_WORKER_API_URL` 环境变量。
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-3xl space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Music Player</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <LyricsDisplay lrcContent={exampleLRC} currentTime={currentTime} />
+            <Player
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              duration={30} // Example duration
+            />
+          </CardContent>
+        </Card>
       </div>
-      
-      {/* Persistent Music Player */}
-      <MusicPlayer 
-        track={currentTrack} 
-        {...playerControls} 
-      />
-      
-      <MadeWithDyad />
     </div>
   );
 };
