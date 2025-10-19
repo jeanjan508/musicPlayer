@@ -1,71 +1,80 @@
-import React, { useMemo, useRef, useEffect } from 'react';
-import { parseLRC, LyricLine } from '@/lib/lrcParser';
+import React, { useMemo } from 'react';
+import { parseLRC } from '@/lib/lrcParser';
 
 interface LyricsDisplayProps {
   lrcContent: string;
   currentTime: number;
 }
 
+// Constants for layout calculation (must match Tailwind classes)
+// h-64 = 256px
+const CONTAINER_HEIGHT_PX = 256; 
+// Approximate height of a lyric line (text-lg + margin/padding)
+// We enforce a fixed height for calculation accuracy.
+const LINE_HEIGHT_PX = 36; 
+
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }) => {
   const parsedLyrics = useMemo(() => parseLRC(lrcContent), [lrcContent]);
-  const activeLineRef = useRef<HTMLParagraphElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   
   // Find the index of the currently active lyric line
   const activeIndex = useMemo(() => {
     let index = -1;
     for (let i = 0; i < parsedLyrics.length; i++) {
-      // Check if the current time is greater than or equal to the line start time
-      // and less than the next line's start time (or it's the last line)
       if (parsedLyrics[i].time <= currentTime) {
         index = i;
       } else {
-        // Since lyrics are sorted by time, we can stop searching
         break;
       }
     }
     return index;
   }, [currentTime, parsedLyrics]);
 
-  // Auto-scroll effect
-  useEffect(() => {
-    if (activeLineRef.current && containerRef.current) {
-      const container = containerRef.current;
-      const activeLine = activeLineRef.current;
-
-      // Calculate the position to scroll to (center the active line)
-      const offset = activeLine.offsetTop - container.offsetTop;
-      const centerOffset = container.clientHeight / 2 - activeLine.clientHeight / 2;
-      
-      container.scrollTo({
-        top: offset - centerOffset,
-        behavior: 'smooth',
-      });
-    }
-  }, [activeIndex]);
-
   if (!lrcContent || parsedLyrics.length === 0) {
     return <div className="text-center text-muted-foreground p-4">No lyrics available.</div>;
   }
 
+  // Calculate the Y translation needed to center the active line (index * LINE_HEIGHT_PX)
+  // Center position: CONTAINER_HEIGHT_PX / 2
+  // Offset needed to center the active line: (CONTAINER_HEIGHT_PX / 2) - (LINE_HEIGHT_PX / 2)
+  const centerOffset = (CONTAINER_HEIGHT_PX / 2) - (LINE_HEIGHT_PX / 2); // 110px
+
+  // Total translation: Shift up by the height of all preceding lines, then adjust for centering.
+  // We use a negative value for translateY to shift the content up.
+  const translateY = activeIndex * LINE_HEIGHT_PX - centerOffset;
+  
+  const transformStyle: React.CSSProperties = {
+    // Apply the calculated translation
+    transform: `translateY(${-translateY}px)`,
+    // Use a smooth transition for the movement
+    transition: 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Smooth curve
+  };
+
   return (
-    <div ref={containerRef} className="h-64 overflow-y-auto p-4 text-center">
-      <div className="flex flex-col items-center pt-24 pb-24"> {/* Added padding for centering */}
+    // Outer container: fixed height, hides overflow, relative for absolute overlays
+    <div className="h-64 overflow-hidden relative bg-card">
+      {/* Inner container: applies the smooth vertical translation */}
+      <div 
+        className="flex flex-col items-center w-full" 
+        style={transformStyle}
+      >
         {parsedLyrics.map((line, index) => (
           <p
             key={index}
-            ref={index === activeIndex ? activeLineRef : null}
-            // Removed size change (text-xl vs text-lg) to prevent layout shift
-            className={`transition-colors duration-150 font-medium mb-2 px-4 text-lg ${
+            // Enforce fixed height for accurate calculation and centering
+            className={`font-medium px-4 text-lg text-center h-[36px] flex items-center justify-center transition-colors duration-150 whitespace-nowrap ${
               index === activeIndex
-                ? 'text-primary' // Only color change
-                : 'text-muted-foreground'
+                ? 'text-primary'
+                : 'text-muted-foreground opacity-70'
             }`}
           >
             {line.text}
           </p>
         ))}
       </div>
+      
+      {/* Subtle gradient overlays for fading effect */}
+      <div className="absolute top-0 left-0 right-0 h-1/4 bg-gradient-to-b from-card to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-card to-transparent pointer-events-none" />
     </div>
   );
 };
