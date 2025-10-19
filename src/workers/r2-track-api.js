@@ -10,12 +10,20 @@
 // Helper function to extract title/artist from filename (simple example)
 function parseFilename(key) {
   // Updated to handle .flac and .lrc extensions
-  const filename = key.replace(/\.(flac|lrc)$/i, '');
-  const parts = filename.split(' - ');
+  const filenameWithExtensionRemoved = key.replace(/\.(flac|lrc)$/i, '');
+  
+  // Extract base filename, ignoring directory path if present
+  const lastSlashIndex = filenameWithExtensionRemoved.lastIndexOf('/');
+  const baseFilename = lastSlashIndex !== -1 ? filenameWithExtensionRemoved.substring(lastSlashIndex + 1) : filenameWithExtensionRemoved;
+
+  // Assuming format: Title - Artist (split by space-hyphen-space)
+  const parts = baseFilename.split(' - ');
   if (parts.length === 2) {
-    return { title: parts[1].trim(), artist: parts[0].trim() };
+    // User specified format is Title - Artist
+    return { title: parts[0].trim(), artist: parts[1].trim() };
   }
-  return { title: filename, artist: 'Unknown Artist' };
+  // Fallback if format is not matched
+  return { title: baseFilename, artist: 'Unknown Artist' };
 }
 
 /**
