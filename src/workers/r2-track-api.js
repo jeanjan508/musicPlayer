@@ -7,17 +7,8 @@
  * 2. R2_PUBLIC_URL_PREFIX: The public domain for your R2 bucket (e.g., 'https://pub-xxxx.r2.dev')
  */
 
-// Define the expected structure for the frontend
-interface Track {
-  id: string;
-  title: string;
-  artist: string; // Placeholder, derived from filename or metadata
-  audioUrl: string;
-  lyrics: string;
-}
-
 // Helper function to extract title/artist from filename (simple example)
-function parseFilename(key: string): { title: string; artist: string } {
+function parseFilename(key) {
   const filename = key.replace(/\.(mp3|lrc)$/i, '');
   const parts = filename.split(' - ');
   if (parts.length === 2) {
@@ -26,7 +17,12 @@ function parseFilename(key: string): { title: string; artist: string } {
   return { title: filename, artist: 'Unknown Artist' };
 }
 
-async function handleRequest(request: Request, env: { BUCKET: R2Bucket, R2_PUBLIC_URL_PREFIX: string }): Promise<Response> {
+/**
+ * @param {Request} request
+ * @param {{ BUCKET: R2Bucket, R2_PUBLIC_URL_PREFIX: string }} env
+ * @returns {Promise<Response>}
+ */
+async function handleRequest(request, env) {
   try {
     const { BUCKET, R2_PUBLIC_URL_PREFIX } = env;
 
@@ -40,7 +36,7 @@ async function handleRequest(request: Request, env: { BUCKET: R2Bucket, R2_PUBLI
 
     const mp3Keys = keys.filter(key => key.toLowerCase().endsWith('.mp3'));
     
-    const tracks: Track[] = [];
+    const tracks = [];
 
     // 2. Process each MP3 file
     for (const mp3Key of mp3Keys) {
@@ -50,7 +46,7 @@ async function handleRequest(request: Request, env: { BUCKET: R2Bucket, R2_PUBLI
       const lrcObject = await BUCKET.get(lrcKey);
       
       let lyricsContent = '';
-      if (lrcObject) {
+      if (lrcObject && lrcObject.body) {
         lyricsContent = await lrcObject.text();
       } else {
         console.warn(`LRC file not found for: ${mp3Key}`);

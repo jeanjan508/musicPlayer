@@ -2,7 +2,7 @@ import { Track } from '@/types/music';
 
 // IMPORTANT: Replace this placeholder with your deployed Cloudflare Worker URL
 // You should set this via a .env file as VITE_WORKER_API_URL
-const WORKER_API_URL = import.meta.env.VITE_WORKER_API_URL || 'http://localhost:8787/tracks'; 
+const WORKER_API_URL = import.meta.env.VITE_WORKER_API_URL || 'https://player.tuple2.dpdns.org/'; 
 
 /**
  * Fetches a list of tracks from the deployed Cloudflare Worker API.
