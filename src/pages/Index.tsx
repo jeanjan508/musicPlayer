@@ -79,7 +79,7 @@ const Index: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col items-center p-4 pb-32"> {/* pb-32 for player space */}
       <div className="w-full max-w-4xl space-y-8 pt-8">
         <header className="text-center pb-4 border-b border-border/50">
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary">LRC Music Player</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-primary">Music Player</h1>
           <p className="text-muted-foreground mt-1">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
         </header>
         
