@@ -1,48 +1,128 @@
-import React, { useState } from 'react';
-import Player from '@/components/Player';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchTracksFromR2 } from '@/api/music';
+import { Track } from '@/types/music';
+import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import MusicPlayer from '@/components/MusicPlayer';
 import LyricsDisplay from '@/components/LyricsDisplay';
+import TrackList from '@/components/TrackList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Example LRC content for demonstration
-const exampleLRC = `
-[ti:Example Song]
-[ar:Example Artist]
-[al:Example Album]
-[00:01.00]Hello, this is the first line.
-[00:03.50]This is the second line, slightly longer.
-[00:06.00]And here is the third line, testing the centering.
-[00:09.00]We are now moving to the fourth line.
-[00:12.00]The fifth line continues the song flow.
-[00:15.00]Sixth line, testing smooth transition.
-[00:18.00]Seventh line, almost done with the example.
-[00:21.00]Eighth line, preparing for the end.
-[00:24.00]Ninth line, final words.
-[00:27.00]End of the song example.
-`;
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 const Index: React.FC = () => {
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  
+  // Fetch tracks using React Query
+  const { data: tracks, isLoading, error } = useQuery<Track[]>({
+    queryKey: ['tracks'],
+    queryFn: fetchTracksFromR2,
+  });
+
+  // Initialize player controls for the current track
+  const playerControls = useMusicPlayer(currentTrack);
+
+  // Automatically select the first track if none is selected and tracks are loaded
+  useEffect(() => {
+    if (!currentTrack && tracks && tracks.length > 0) {
+      setCurrentTrack(tracks[0]);
+    }
+  }, [tracks, currentTrack]);
+
+  const handleSelectTrack = (track: Track) => {
+    // If selecting a new track, set it and pause playback temporarily
+    if (currentTrack?.id !== track.id) {
+      setCurrentTrack(track);
+      // The useMusicPlayer hook handles loading the new track and resetting state
+    } else {
+      // If selecting the current track, toggle play/pause
+      playerControls.togglePlayPause();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-3xl space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="text-center">Music Player</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-3xl space-y-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error Loading Tracks</AlertTitle>
+            <AlertDescription>
+              Failed to fetch music tracks. Please ensure your Cloudflare Worker API is deployed and the URL is correctly configured in the VITE_WORKER_API_URL environment variable.
+              <p className="mt-2 text-sm text-red-200">Details: {error.message}</p>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-3xl space-y-6">
+    <div className="min-h-screen bg-background flex flex-col items-center p-4 pb-32"> {/* pb-32 for player space */}
+      <div className="w-full max-w-3xl space-y-6 pt-8">
+        <h1 className="text-3xl font-bold text-center">LRC Music Player</h1>
+        
+        {/* Lyrics Display Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Music Player</CardTitle>
+            <CardTitle className="text-center">
+              {currentTrack ? `${currentTrack.title} - ${currentTrack.artist}` : 'Select a Track'}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <LyricsDisplay lrcContent={exampleLRC} currentTime={currentTime} />
-            <Player
-              currentTime={currentTime}
-              setCurrentTime={setCurrentTime}
-              isPlaying={isPlaying}
-              setIsPlaying={setIsPlaying}
-              duration={30} // Example duration
-            />
+          <CardContent className="p-0">
+            {currentTrack && currentTrack.lyrics ? (
+              <LyricsDisplay 
+                lrcContent={currentTrack.lyrics} 
+                currentTime={playerControls.currentTime} 
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                No lyrics available for this track.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Track List Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Tracks ({tracks?.length || 0})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tracks && (
+              <TrackList 
+                tracks={tracks} 
+                onSelectTrack={handleSelectTrack} 
+                currentTrackId={currentTrack?.id || null}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Fixed Music Player */}
+      <MusicPlayer 
+        track={currentTrack} 
+        {...playerControls} 
+      />
     </div>
   );
 };
