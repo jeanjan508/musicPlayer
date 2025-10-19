@@ -3,6 +3,7 @@ import { Track } from '@/types/music';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TrackListProps {
   tracks: Track[];
@@ -16,9 +17,12 @@ const TrackList: React.FC<TrackListProps> = ({ tracks, onSelectTrack, currentTra
       {tracks.map((track) => (
         <Card 
           key={track.id} 
-          className={`cursor-pointer transition-all hover:shadow-md ${
-            currentTrackId === track.id ? 'border-primary ring-2 ring-primary/50' : ''
-          }`}
+          className={cn(
+            "cursor-pointer transition-all duration-200 border",
+            currentTrackId === track.id 
+              ? 'bg-accent/50 border-primary shadow-lg' 
+              : 'hover:bg-muted/50 border-transparent'
+          )}
           onClick={() => onSelectTrack(track)}
         >
           <CardContent className="p-4 flex items-center justify-between">

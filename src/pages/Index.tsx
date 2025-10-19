@@ -44,7 +44,7 @@ const Index: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-3xl space-y-6">
+        <div className="w-full max-w-4xl space-y-6">
           <Card>
             <CardHeader><CardTitle className="text-center">Music Player</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -61,7 +61,7 @@ const Index: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-3xl space-y-6">
+        <div className="w-full max-w-4xl space-y-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error Loading Tracks</AlertTitle>
@@ -77,13 +77,16 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center p-4 pb-32"> {/* pb-32 for player space */}
-      <div className="w-full max-w-3xl space-y-6 pt-8">
-        <h1 className="text-3xl font-bold text-center">LRC Music Player</h1>
+      <div className="w-full max-w-4xl space-y-8 pt-8">
+        <header className="text-center pb-4 border-b border-border/50">
+          <h1 className="text-4xl font-extrabold tracking-tight text-primary">LRC Music Player</h1>
+          <p className="text-muted-foreground mt-1">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
+        </header>
         
         {/* Lyrics Display Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">
+        <Card className="shadow-xl border-2 border-primary/10">
+          <CardHeader className="p-4 pb-0">
+            <CardTitle className="text-center text-xl font-semibold">
               {currentTrack ? `${currentTrack.title} - ${currentTrack.artist}` : 'Select a Track'}
             </CardTitle>
           </CardHeader>
