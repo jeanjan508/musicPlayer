@@ -6,11 +6,32 @@ import TrackList from '@/components/TrackList';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 import { Track } from '@/types/music';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { TRACKS } from '@/data/tracks';
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchTracksFromR2 } from '@/api/music';
 
 const Index = () => {
-  // Initialize with the first track or null
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(TRACKS[0] || null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch tracks on component mount
+  useEffect(() => {
+    const loadTracks = async () => {
+      try {
+        const fetchedTracks = await fetchTracksFromR2();
+        setTracks(fetchedTracks);
+        if (fetchedTracks.length > 0) {
+          setCurrentTrack(fetchedTracks[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tracks:", error);
+        // Optionally show an error toast here
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadTracks();
+  }, []);
   
   // Use the custom hook to manage playback state
   const playerControls = useMusicPlayer(currentTrack);
@@ -19,9 +40,30 @@ const Index = () => {
 
   const handleSelectTrack = (track: Track) => {
     setCurrentTrack(track);
-    // Automatically try to play the new track
-    // Note: Autoplay might be blocked by browsers, but the hook handles loading the new source.
-    // We rely on the user clicking play on the MusicPlayer component.
+  };
+
+  const renderTrackList = () => {
+    if (isLoading) {
+      return (
+        <div className="space-y-3">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      );
+    }
+    
+    if (tracks.length === 0) {
+      return <p className="text-center text-muted-foreground">No tracks found.</p>;
+    }
+
+    return (
+      <TrackList 
+        tracks={tracks} 
+        onSelectTrack={handleSelectTrack} 
+        currentTrackId={currentTrack?.id || null}
+      />
+    );
   };
 
   return (
@@ -40,11 +82,7 @@ const Index = () => {
                 <CardTitle>Available Tracks</CardTitle>
               </CardHeader>
               <CardContent>
-                <TrackList 
-                  tracks={TRACKS} 
-                  onSelectTrack={handleSelectTrack} 
-                  currentTrackId={currentTrack?.id || null}
-                />
+                {renderTrackList()}
               </CardContent>
             </Card>
           </div>
@@ -71,7 +109,7 @@ const Index = () => {
                 
                 <div className="mt-6 text-center">
                   <p className="text-sm text-muted-foreground">
-                    音频流直接指向您在 `src/data/tracks.ts` 中配置的 R2 公共 URL。
+                    当前曲目列表通过模拟 API 调用加载。在实际部署中，您需要一个 Cloudflare Worker 来动态生成此列表。
                   </p>
                 </div>
               </CardContent>
