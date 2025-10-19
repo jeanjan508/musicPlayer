@@ -104,7 +104,7 @@ const Index: React.FC = () => {
         {/* Track List Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Available Tracks ({tracks?.length || 0})</CardTitle>
+            <CardTitle>歌曲列表 ({tracks?.length || 0})</CardTitle>
           </CardHeader>
           <CardContent>
             {tracks && (
