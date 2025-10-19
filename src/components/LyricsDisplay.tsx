@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { parseLRC, LyricLine } from '@/lib/lrcParser';
 
 interface LyricsDisplayProps {
@@ -8,6 +8,8 @@ interface LyricsDisplayProps {
 
 const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }) => {
   const parsedLyrics = useMemo(() => parseLRC(lrcContent), [lrcContent]);
+  const activeLineRef = useRef<HTMLParagraphElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Find the index of the currently active lyric line
   const activeIndex = useMemo(() => {
@@ -25,17 +27,35 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }
     return index;
   }, [currentTime, parsedLyrics]);
 
+  // Auto-scroll effect
+  useEffect(() => {
+    if (activeLineRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const activeLine = activeLineRef.current;
+
+      // Calculate the position to scroll to (center the active line)
+      const offset = activeLine.offsetTop - container.offsetTop;
+      const centerOffset = container.clientHeight / 2 - activeLine.clientHeight / 2;
+      
+      container.scrollTo({
+        top: offset - centerOffset,
+        behavior: 'smooth',
+      });
+    }
+  }, [activeIndex]);
+
   if (!lrcContent || parsedLyrics.length === 0) {
     return <div className="text-center text-muted-foreground p-4">No lyrics available.</div>;
   }
 
   return (
-    <div className="h-64 overflow-y-auto p-4 text-center">
-      <div className="flex flex-col items-center">
+    <div ref={containerRef} className="h-64 overflow-y-auto p-4 text-center">
+      <div className="flex flex-col items-center pt-24 pb-24"> {/* Added padding for centering */}
         {parsedLyrics.map((line, index) => (
           <p
             key={index}
-            className={`transition-colors duration-300 text-lg font-medium mb-2 ${
+            ref={index === activeIndex ? activeLineRef : null}
+            className={`transition-colors duration-300 text-lg font-medium mb-2 px-4 ${
               index === activeIndex
                 ? 'text-primary scale-105'
                 : 'text-muted-foreground'
