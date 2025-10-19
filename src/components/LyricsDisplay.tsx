@@ -55,10 +55,10 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }
           <p
             key={index}
             ref={index === activeIndex ? activeLineRef : null}
-            className={`transition-colors duration-300 text-lg font-medium mb-2 px-4 ${
+            className={`transition-all duration-150 font-medium mb-2 px-4 ${
               index === activeIndex
-                ? 'text-primary scale-105'
-                : 'text-muted-foreground'
+                ? 'text-primary text-xl' // Increased size for active line
+                : 'text-muted-foreground text-lg' // Base size
             }`}
           >
             {line.text}
