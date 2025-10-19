@@ -45,8 +45,8 @@ const LyricsDisplay: React.FC<LyricsDisplayProps> = ({ lrcContent, currentTime }
   const transformStyle: React.CSSProperties = {
     // Apply the calculated translation
     transform: `translateY(${-translateY}px)`,
-    // Use a smooth transition for the movement
-    transition: 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Smooth curve
+    // Increased duration to 0.4s and using ease-in-out for a more noticeable buffer effect
+    transition: 'transform 0.4s ease-in-out', 
   };
 
   return (
