@@ -16,10 +16,16 @@ export async function fetchTracksFromR2(): Promise<Track[]> {
   const response = await fetch(WORKER_API_URL);
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch tracks from Worker API: ${response.statusText}`);
+    // Log the error response body for better debugging
+    const errorBody = await response.text();
+    console.error("Worker API Error Response:", errorBody);
+    throw new Error(`Failed to fetch tracks from Worker API: ${response.status} ${response.statusText}`);
   }
   
   const tracks = await response.json();
+  
+  // Log the successful response for verification
+  console.log("Successfully fetched tracks:", tracks);
   
   // Basic validation to ensure the structure is correct
   if (!Array.isArray(tracks) || tracks.some(t => !t.id || !t.audioUrl || !t.lyrics)) {
