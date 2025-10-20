@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Repeat1, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,7 +75,8 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         return { Icon: Repeat1, title: '单曲循环', className: 'text-primary' };
       case 'sequential':
       default:
-        return { Icon: Repeat, title: '顺序播放', className: 'text-muted-foreground/70' };
+        // Use ArrowRight to signify playing through the list once and stopping
+        return { Icon: ArrowRight, title: '顺序播放', className: 'text-muted-foreground/70' };
     }
   };
   
