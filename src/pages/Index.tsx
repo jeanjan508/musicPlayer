@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchTracksFromR2 } from '@/api/music';
 import { Track } from '@/types/music';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 import MusicPlayer from '@/components/MusicPlayer';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import TrackList from '@/components/TrackList';
+import UploadForm from '@/components/UploadForm'; // Import the new component
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertTriangle, Upload } from 'lucide-react';
 
 const Index: React.FC = () => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   
   // Fetch tracks using React Query
   const { data: tracks, isLoading, error } = useQuery<Track[]>({
@@ -39,6 +44,13 @@ const Index: React.FC = () => {
       // If selecting the current track, toggle play/pause
       playerControls.togglePlayPause();
     }
+  };
+  
+  const handleUploadSuccess = () => {
+    // Close the dialog
+    setIsUploadDialogOpen(false);
+    // Invalidate the tracks query to refetch the list, showing the new track
+    queryClient.invalidateQueries({ queryKey: ['tracks'] });
   };
 
   if (isLoading) {
@@ -78,9 +90,27 @@ const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center p-4 pb-32"> {/* pb-32 for player space */}
       <div className="w-full max-w-4xl space-y-8 pt-8">
-        <header className="text-center pb-4 border-b border-border/50">
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary">Music Player</h1>
-          <p className="text-muted-foreground mt-1">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
+        <header className="flex justify-between items-center pb-4 border-b border-border/50">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-primary">Music Player</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
+          </div>
+          
+          {/* Upload Button */}
+          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="default" className="shadow-md">
+                <Upload className="w-4 h-4 mr-2" />
+                上传曲目
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>上传新曲目</DialogTitle>
+              </DialogHeader>
+              <UploadForm onUploadSuccess={handleUploadSuccess} />
+            </DialogContent>
+          </Dialog>
         </header>
         
         {/* Lyrics Display Card */}
