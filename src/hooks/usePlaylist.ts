@@ -9,7 +9,7 @@ interface PlaylistControls {
   currentTrackIndex: number;
   playbackMode: PlaybackMode;
   setPlaybackMode: (mode: PlaybackMode) => void;
-  togglePlaybackMode: () => void; // New function for easy toggling
+  togglePlaybackMode: () => void;
   playNextTrack: () => void;
   playPreviousTrack: () => void;
   selectTrackByIndex: (index: number) => void;
@@ -31,14 +31,14 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
   
   const totalTracks = tracks.length;
 
-  // Function to cycle through the three modes
+  // Function to cycle through the three modes: sequential -> loop -> repeat-one -> sequential
   const togglePlaybackMode = useCallback(() => {
     setPlaybackMode(prevMode => {
       if (prevMode === 'sequential') return 'loop';
       if (prevMode === 'loop') return 'repeat-one';
       return 'sequential';
     });
-  }, []);
+  }, []); // No dependencies needed for state setter
 
   // Function to play the next track based on the current mode
   const playNextTrack = useCallback(() => {
