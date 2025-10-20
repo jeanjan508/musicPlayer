@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,8 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress'; // Import Progress component
 import { Music, FileText, Upload } from 'lucide-react';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 
 // Define the schema for form validation
 const uploadSchema = z.object({
@@ -25,6 +26,9 @@ interface UploadFormProps {
 const WORKER_API_URL = import.meta.env.VITE_WORKER_API_URL || 'https://player.tuple2.dpdns.org/'; 
 
 const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
     defaultValues: {
@@ -37,24 +41,48 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
     const audioFile = data.audioFile[0];
     const lrcFile = data.lrcFile[0];
 
-    const loadingToastId = showSuccess(`Uploading ${audioFile.name}...`);
+    const loadingToastId = showLoading(`准备上传 ${audioFile.name}...`);
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
       const formData = new FormData();
       formData.append('audio', audioFile, audioFile.name);
       formData.append('lyrics', lrcFile, lrcFile.name);
 
-      const response = await fetch(WORKER_API_URL, {
-        method: 'POST',
-        body: formData,
+      const xhr = new XMLHttpRequest();
+      
+      // Set up progress listener
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percent);
+        }
+      };
+
+      // Set up load listener (success/failure)
+      const responsePromise = new Promise<void>((resolve, reject) => {
+        xhr.onload = () => {
+          dismissToast(loadingToastId);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          dismissToast(loadingToastId);
+          reject(new Error("Network error or request failed."));
+        };
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-      }
+      xhr.open('POST', WORKER_API_URL);
+      xhr.send(formData);
 
-      showSuccess("Upload successful! Refreshing track list.", { id: loadingToastId });
+      await responsePromise;
+
+      showSuccess("上传成功！正在刷新曲目列表。");
       
       // Reset form and notify parent component
       form.reset();
@@ -62,7 +90,10 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
 
     } catch (error) {
       console.error("Upload error:", error);
-      showError(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError(`上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -97,6 +128,7 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
                         onChange(event.target.files);
                       }}
                       className="file:text-primary file:font-medium"
+                      disabled={isUploading}
                     />
                   </FormControl>
                   <FormMessage />
@@ -123,15 +155,24 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
                         onChange(event.target.files);
                       }}
                       className="file:text-primary file:font-medium"
+                      disabled={isUploading}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            {/* Progress Bar Display */}
+            {isUploading && (
+              <div className="space-y-2 pt-2">
+                <p className="text-sm text-muted-foreground">上传进度: {uploadProgress}%</p>
+                <Progress value={uploadProgress} className="w-full h-2" />
+              </div>
+            )}
 
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? '上传中...' : '开始上传'}
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isUploading}>
+              {isUploading ? `上传中... (${uploadProgress}%)` : '开始上传'}
             </Button>
           </form>
         </Form>
