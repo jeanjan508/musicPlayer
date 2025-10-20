@@ -30,10 +30,11 @@ const Index: React.FC = () => {
     currentTrackIndex, 
     playerControls, 
     selectTrackByIndex,
-    playNextTrack, // We need these in MusicPlayer, but not directly here
-    playPreviousTrack, // We need these in MusicPlayer, but not directly here
-    playbackMode, // We need these in MusicPlayer, but not directly here
-    setPlaybackMode, // We need these in MusicPlayer, but not directly here
+    playNextTrack, 
+    playPreviousTrack, 
+    playbackMode, 
+    setPlaybackMode, 
+    togglePlaybackMode, // <-- ADDED: Destructure the toggle function
   } = usePlaylist(tracks);
 
   // Automatically select the first track if none is selected and tracks are loaded
@@ -167,6 +168,7 @@ const Index: React.FC = () => {
         playPreviousTrack={playPreviousTrack}
         playbackMode={playbackMode}
         setPlaybackMode={setPlaybackMode}
+        togglePlaybackMode={togglePlaybackMode} // <-- ADDED: Pass the toggle function
       />
     </div>
   );
