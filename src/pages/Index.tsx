@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchTracksFromR2 } from '@/api/music';
 import { Track } from '@/types/music';
-import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import { usePlaylist } from '@/hooks/usePlaylist'; // Use the new hook
 import MusicPlayer from '@/components/MusicPlayer';
 import LyricsDisplay from '@/components/LyricsDisplay';
 import TrackList from '@/components/TrackList';
-import UploadForm from '@/components/UploadForm'; // Import the new component
+import UploadForm from '@/components/UploadForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -15,34 +15,41 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertTriangle, Upload } from 'lucide-react';
 
 const Index: React.FC = () => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   
   // Fetch tracks using React Query
-  const { data: tracks, isLoading, error } = useQuery<Track[]>({
+  const { data: tracks = [], isLoading, error } = useQuery<Track[]>({
     queryKey: ['tracks'],
     queryFn: fetchTracksFromR2,
   });
 
-  // Initialize player controls for the current track
-  const playerControls = useMusicPlayer(currentTrack);
+  // Initialize playlist controls
+  const { 
+    currentTrack, 
+    currentTrackIndex, 
+    playerControls, 
+    selectTrackByIndex,
+    playNextTrack, // We need these in MusicPlayer, but not directly here
+    playPreviousTrack, // We need these in MusicPlayer, but not directly here
+    playbackMode, // We need these in MusicPlayer, but not directly here
+    setPlaybackMode, // We need these in MusicPlayer, but not directly here
+  } = usePlaylist(tracks);
 
   // Automatically select the first track if none is selected and tracks are loaded
-  useEffect(() => {
-    if (!currentTrack && tracks && tracks.length > 0) {
-      setCurrentTrack(tracks[0]);
-    }
-  }, [tracks, currentTrack]);
-
+  // This is now handled implicitly by usePlaylist initializing currentTrackIndex to 0.
+  
   const handleSelectTrack = (track: Track) => {
-    // If selecting a new track, set it and pause playback temporarily
-    if (currentTrack?.id !== track.id) {
-      setCurrentTrack(track);
-      // The useMusicPlayer hook handles loading the new track and resetting state
-    } else {
-      // If selecting the current track, toggle play/pause
-      playerControls.togglePlayPause();
+    const index = tracks.findIndex(t => t.id === track.id);
+    if (index !== -1) {
+      // If selecting a new track, set it and start playing
+      if (currentTrack?.id !== track.id) {
+        selectTrackByIndex(index);
+        // The usePlaylist hook will handle the play state transition
+      } else {
+        // If selecting the current track, toggle play/pause
+        playerControls.togglePlayPause();
+      }
     }
   };
   
@@ -152,10 +159,14 @@ const Index: React.FC = () => {
         </Card>
       </div>
       
-      {/* Fixed Music Player */}
+      {/* Fixed Music Player - Pass all necessary controls */}
       <MusicPlayer 
         track={currentTrack} 
         {...playerControls} 
+        playNextTrack={playNextTrack}
+        playPreviousTrack={playPreviousTrack}
+        playbackMode={playbackMode}
+        setPlaybackMode={setPlaybackMode}
       />
     </div>
   );

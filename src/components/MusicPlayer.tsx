@@ -1,10 +1,11 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import { Track } from '@/types/music';
 import { cn } from '@/lib/utils';
+import { PlaybackMode } from '@/hooks/usePlaylist'; // Import PlaybackMode type
 
 interface MusicPlayerControls {
   isPlaying: boolean;
@@ -19,7 +20,14 @@ interface MusicPlayerControls {
   toggleMute: () => void;
 }
 
-interface MusicPlayerProps extends MusicPlayerControls {
+interface PlaylistControls {
+  playNextTrack: () => void;
+  playPreviousTrack: () => void;
+  playbackMode: PlaybackMode;
+  setPlaybackMode: (mode: PlaybackMode) => void;
+}
+
+interface MusicPlayerProps extends MusicPlayerControls, PlaylistControls {
   track: Track | null;
 }
 
@@ -41,7 +49,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   togglePlayPause, 
   handleSeek, 
   handleVolumeChange, 
-  toggleMute 
+  toggleMute,
+  playNextTrack,
+  playPreviousTrack,
+  playbackMode,
+  setPlaybackMode,
 }) => {
 
   const handleSliderSeek = (value: number[]) => {
@@ -51,6 +63,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const handleSliderVolumeChange = (value: number[]) => {
     // Convert slider value (0-100) to volume (0-1)
     handleVolumeChange(value[0] / 100);
+  };
+  
+  const togglePlaybackMode = () => {
+    // Simple toggle between sequential and loop for now
+    setPlaybackMode(playbackMode === 'sequential' ? 'loop' : 'sequential');
   };
 
   if (!track) {
@@ -89,11 +106,34 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         <div className="flex flex-col items-center w-1/2 px-4">
           
           {/* Controls */}
-          <div className="flex space-x-6 mb-2">
-            {/* Skip buttons are placeholders for now */}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+          <div className="flex space-x-6 mb-2 items-center">
+            
+            {/* Playback Mode Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8 transition-colors",
+                playbackMode === 'loop' ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-primary'
+              )}
+              onClick={togglePlaybackMode}
+              title={playbackMode === 'loop' ? 'Loop Playlist' : 'Sequential Play'}
+            >
+              {/* Using Repeat icon for loop/sequential */}
+              <Repeat className="h-4 w-4" />
+            </Button>
+
+            {/* Previous Track */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+              onClick={playPreviousTrack}
+            >
               <SkipBack className="h-4 w-4" />
             </Button>
+            
+            {/* Play/Pause */}
             <Button 
               variant="default" 
               size="icon" 
@@ -102,9 +142,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
             >
               {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+            
+            {/* Next Track */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
+              onClick={playNextTrack}
+            >
               <SkipForward className="h-4 w-4" />
             </Button>
+            
+            {/* Placeholder for future features (e.g., Shuffle) */}
+            <div className="h-8 w-8"></div> 
           </div>
 
           {/* Progress Bar */}
