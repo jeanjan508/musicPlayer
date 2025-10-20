@@ -3,14 +3,14 @@
  * from an R2 bucket and return them as a JSON API response.
  * 
  * ENVIRONMENT VARIABLES REQUIRED:
- * 1. BUCKET: R2 Bucket binding (e.g., 'music-bucket')
+ * 1. BUCKET: R2 Bucket binding (e.g., 'music-bucket') - Must have Read/Write permissions
  * 2. R2_PUBLIC_URL_PREFIX: The public domain for your R2 bucket (e.g., 'https://pub-xxxx.r2.dev')
  */
 
 // Helper function to extract title/artist from filename (simple example)
 function parseFilename(key) {
   // Updated to handle .flac and .lrc extensions
-  const filenameWithExtensionRemoved = key.replace(/\.(flac|lrc)$/i, '');
+  const filenameWithExtensionRemoved = key.replace(/\.(flac|lrc|mp3|wav)$/i, '');
   
   // Extract base filename, ignoring directory path if present
   const lastSlashIndex = filenameWithExtensionRemoved.lastIndexOf('/');
@@ -27,51 +27,44 @@ function parseFilename(key) {
 }
 
 /**
- * Handles incoming requests.
+ * Handles GET request to list tracks.
  */
-async function handleRequest(request, env) {
-  try {
-    // env contains the bindings (BUCKET, R2_PUBLIC_URL_PREFIX)
+async function handleGetRequest(env) {
     const { BUCKET, R2_PUBLIC_URL_PREFIX } = env;
 
-    if (!BUCKET || !R2_PUBLIC_URL_PREFIX) {
-      return new Response('R2 BUCKET or R2_PUBLIC_URL_PREFIX environment variables not configured.', { status: 500 });
-    }
-
     // 1. List all objects in the bucket
-    // Note: BUCKET is expected to be an R2Bucket binding provided by the Worker environment.
     const listed = await BUCKET.list();
     const keys = listed.objects.map(obj => obj.key);
 
-    // Filter for FLAC files
-    const flacKeys = keys.filter(key => key.toLowerCase().endsWith('.flac'));
+    // Filter for common audio files (FLAC, MP3, WAV)
+    const audioKeys = keys.filter(key => key.toLowerCase().match(/\.(flac|mp3|wav)$/));
     
     const tracks = [];
 
-    // 2. Process each FLAC file
-    for (const flacKey of flacKeys) {
-      // 3. Find the corresponding LRC file
-      const lrcKey = flacKey.replace(/\.flac$/i, '.lrc');
+    // 2. Process each audio file
+    for (const audioKey of audioKeys) {
+      // Determine the corresponding lyric key (e.g., .flac -> .lrc)
+      const lrcKey = audioKey.replace(/\.(flac|mp3|wav)$/i, '.lrc');
       
-      // 4. Try to fetch the corresponding LRC file
+      // 3. Try to fetch the corresponding LRC file
       const lrcObject = await BUCKET.get(lrcKey);
       
       let lyricsContent = '';
       if (lrcObject && lrcObject.body) {
         lyricsContent = await lrcObject.text();
       } else {
-        console.warn(`LRC file not found for: ${flacKey}`);
+        console.warn(`LRC file not found for: ${audioKey}`);
         lyricsContent = '[00:00.00]No lyrics found for this track.';
       }
 
-      // 5. Construct the track object
-      const { title, artist } = parseFilename(flacKey);
+      // 4. Construct the track object
+      const { title, artist } = parseFilename(audioKey);
       
       tracks.push({
-        id: flacKey, // Use key as unique ID
+        id: audioKey, // Use key as unique ID
         title: title,
         artist: artist,
-        audioUrl: `${R2_PUBLIC_URL_PREFIX}/${flacKey}`,
+        audioUrl: `${R2_PUBLIC_URL_PREFIX}/${audioKey}`,
         lyrics: lyricsContent,
       });
     }
@@ -79,13 +72,85 @@ async function handleRequest(request, env) {
     return new Response(JSON.stringify(tracks), {
       headers: { 
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // IMPORTANT: Set CORS header for frontend access
+        'Access-Control-Allow-Origin': '*',
       },
     });
+}
+
+/**
+ * Handles POST request to upload files.
+ */
+async function handlePostRequest(request, env) {
+    const { BUCKET } = env;
+    
+    // Parse the multipart form data
+    const formData = await request.formData();
+    const audioFile = formData.get('audio');
+    const lrcFile = formData.get('lyrics');
+
+    if (!audioFile || !lrcFile || !(audioFile instanceof File) || !(lrcFile instanceof File)) {
+        return new Response('Missing audio or lyrics file in form data.', { status: 400 });
+    }
+
+    // 1. Upload Audio File
+    const audioKey = audioFile.name;
+    await BUCKET.put(audioKey, audioFile.stream(), {
+        httpMetadata: { contentType: audioFile.type },
+    });
+
+    // 2. Upload Lyrics File
+    const lrcKey = lrcFile.name;
+    await BUCKET.put(lrcKey, lrcFile.stream(), {
+        httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+    });
+
+    return new Response(JSON.stringify({ 
+        message: 'Files uploaded successfully', 
+        audioKey, 
+        lrcKey 
+    }), {
+        status: 200,
+        headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        },
+    });
+}
+
+/**
+ * Handles incoming requests.
+ */
+async function handleRequest(request, env) {
+  // Handle CORS preflight requests
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
+  try {
+    const { BUCKET, R2_PUBLIC_URL_PREFIX } = env;
+
+    if (!BUCKET || !R2_PUBLIC_URL_PREFIX) {
+      return new Response('R2 BUCKET or R2_PUBLIC_URL_PREFIX environment variables not configured.', { status: 500 });
+    }
+
+    if (request.method === 'POST') {
+      return handlePostRequest(request, env);
+    } else if (request.method === 'GET') {
+      return handleGetRequest(env);
+    } else {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
 
   } catch (error) {
     console.error('Worker error:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    return new Response(`Internal Server Error: ${error.message}`, { status: 500 });
   }
 }
 

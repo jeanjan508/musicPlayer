@@ -21,6 +21,9 @@ interface UploadFormProps {
   onUploadSuccess: () => void;
 }
 
+// IMPORTANT: Use the same API URL for uploads
+const WORKER_API_URL = import.meta.env.VITE_WORKER_API_URL || 'https://player.tuple2.dpdns.org/'; 
+
 const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
@@ -34,27 +37,37 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
     const audioFile = data.audioFile[0];
     const lrcFile = data.lrcFile[0];
 
-    // --- IMPORTANT: Placeholder for actual API call ---
-    // In a real application, you would send these files to your Cloudflare Worker
-    // which is configured to handle R2 uploads.
+    const loadingToastId = showSuccess(`Uploading ${audioFile.name}...`);
 
-    showSuccess(`Attempting to upload ${audioFile.name} and ${lrcFile.name}...`);
-    
-    // Since we cannot implement the backend Worker logic here, 
-    // we simulate a successful upload after a delay.
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // In a real scenario, you would check the API response for success/failure.
-    
-    showSuccess("Upload simulated successfully! (Requires backend implementation)");
-    
-    // Reset form and notify parent component
-    form.reset();
-    onUploadSuccess();
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioFile, audioFile.name);
+      formData.append('lyrics', lrcFile, lrcFile.name);
+
+      const response = await fetch(WORKER_API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+      }
+
+      showSuccess("Upload successful! Refreshing track list.", { id: loadingToastId });
+      
+      // Reset form and notify parent component
+      form.reset();
+      onUploadSuccess();
+
+    } catch (error) {
+      console.error("Upload error:", error);
+      showError(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg border-none">
       <CardHeader>
         <CardTitle className="flex items-center">
           <Upload className="w-5 h-5 mr-2 text-primary" />
