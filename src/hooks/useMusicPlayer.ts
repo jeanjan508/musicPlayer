@@ -27,7 +27,7 @@ export const useMusicPlayer = (track: Track | null): MusicPlayerState => {
     if (audioRef.current && track) {
       audioRef.current.src = track.audioUrl;
       audioRef.current.load();
-      setIsPlaying(false);
+      // 移除 setIsPlaying(false)。现在播放状态的连续性由 usePlaylist 管理。
       setCurrentTime(0);
       setDuration(0);
     }

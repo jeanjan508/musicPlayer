@@ -18,6 +18,8 @@ interface PlaylistControls {
 export const usePlaylist = (tracks: Track[]): PlaylistControls => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('sequential');
+  // New state to signal that the next track should start playing automatically
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false); 
   
   const currentTrack = useMemo(() => {
     if (tracks.length === 0) return null;
@@ -26,7 +28,7 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
 
   // Embed the music player controls for the current track
   const playerControls = useMusicPlayer(currentTrack);
-  const { audioRef, isPlaying, togglePlayPause } = playerControls;
+  const { audioRef, isPlaying } = playerControls;
   
   const totalTracks = tracks.length;
 
@@ -46,17 +48,16 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
         }
+        setShouldAutoPlay(false); // Ensure auto-play flag is reset
         return;
       }
     }
     
     setCurrentTrackIndex(nextIndex);
-    // Automatically play the next track
-    if (isPlaying) {
-        // We need a slight delay or a direct call to play after the track loads
-        // For now, rely on the useEffect below to handle auto-play after index change
-    }
-  }, [currentTrackIndex, totalTracks, playbackMode, isPlaying, audioRef]);
+    // Note: We don't set shouldAutoPlay here for manual skips (SkipForward button), 
+    // as the isPlaying state persists across track changes in useMusicPlayer (due to Step 1).
+    
+  }, [currentTrackIndex, totalTracks, playbackMode, audioRef]);
 
   // Function to play the previous track
   const playPreviousTrack = useCallback(() => {
@@ -69,12 +70,14 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     }
     
     setCurrentTrackIndex(prevIndex);
+    // Manual skip maintains the current playing state (due to Step 1)
   }, [currentTrackIndex, totalTracks]);
 
   // Function to select a track by index
   const selectTrackByIndex = useCallback((index: number) => {
     if (index >= 0 && index < totalTracks) {
       setCurrentTrackIndex(index);
+      // Manual selection maintains the current playing state (due to Step 1)
     }
   }, [totalTracks]);
 
@@ -90,7 +93,9 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
         return;
       }
       
-      // Otherwise, play the next track
+      // Set flag to force play the next track
+      setShouldAutoPlay(true);
+      // Then, move to the next track
       playNextTrack();
     };
 
@@ -101,16 +106,15 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     };
   }, [audioRef, currentTrackIndex, totalTracks, playbackMode, playNextTrack]);
   
-  // Effect to ensure the new track starts playing if the previous one was playing
+  // Effect to trigger playback when a new track is loaded and the auto-play flag is set
   useEffect(() => {
-      if (currentTrack && isPlaying) {
-          // This is a common pattern: when the track changes (due to index change), 
-          // the useMusicPlayer hook resets the audio element. We need to re-trigger play.
-          audioRef.current?.play().catch(error => {
+      if (shouldAutoPlay && currentTrack && audioRef.current) {
+          audioRef.current.play().catch(error => {
               console.error("Error auto-playing next track:", error);
           });
+          setShouldAutoPlay(false); // Reset the flag
       }
-  }, [currentTrack, isPlaying, audioRef]);
+  }, [currentTrack, shouldAutoPlay, audioRef]);
 
 
   return {
