@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Track } from '@/types/music';
 import { useMusicPlayer } from './useMusicPlayer';
 
-export type PlaybackMode = 'sequential' | 'loop';
+export type PlaybackMode = 'sequential' | 'loop' | 'repeat-one';
 
 interface PlaylistControls {
   currentTrack: Track | null;
   currentTrackIndex: number;
   playbackMode: PlaybackMode;
   setPlaybackMode: (mode: PlaybackMode) => void;
+  togglePlaybackMode: () => void; // New function for easy toggling
   playNextTrack: () => void;
   playPreviousTrack: () => void;
   selectTrackByIndex: (index: number) => void;
@@ -18,7 +19,6 @@ interface PlaylistControls {
 export const usePlaylist = (tracks: Track[]): PlaylistControls => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('sequential');
-  // New state to signal that the next track should start playing automatically
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false); 
   
   const currentTrack = useMemo(() => {
@@ -26,11 +26,19 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     return tracks[currentTrackIndex];
   }, [tracks, currentTrackIndex]);
 
-  // Embed the music player controls for the current track
   const playerControls = useMusicPlayer(currentTrack);
-  const { audioRef, isPlaying } = playerControls;
+  const { audioRef } = playerControls;
   
   const totalTracks = tracks.length;
+
+  // Function to cycle through the three modes
+  const togglePlaybackMode = useCallback(() => {
+    setPlaybackMode(prevMode => {
+      if (prevMode === 'sequential') return 'loop';
+      if (prevMode === 'loop') return 'repeat-one';
+      return 'sequential';
+    });
+  }, []);
 
   // Function to play the next track based on the current mode
   const playNextTrack = useCallback(() => {
@@ -48,14 +56,12 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
         }
-        setShouldAutoPlay(false); // Ensure auto-play flag is reset
+        setShouldAutoPlay(false); 
         return;
       }
     }
     
     setCurrentTrackIndex(nextIndex);
-    // Note: We don't set shouldAutoPlay here for manual skips (SkipForward button), 
-    // as the isPlaying state persists across track changes in useMusicPlayer (due to Step 1).
     
   }, [currentTrackIndex, totalTracks, playbackMode, audioRef]);
 
@@ -70,14 +76,12 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     }
     
     setCurrentTrackIndex(prevIndex);
-    // Manual skip maintains the current playing state (due to Step 1)
   }, [currentTrackIndex, totalTracks]);
 
   // Function to select a track by index
   const selectTrackByIndex = useCallback((index: number) => {
     if (index >= 0 && index < totalTracks) {
       setCurrentTrackIndex(index);
-      // Manual selection maintains the current playing state (due to Step 1)
     }
   }, [totalTracks]);
 
@@ -87,9 +91,17 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     if (!audio) return;
 
     const handleEnded = () => {
+      if (playbackMode === 'repeat-one') {
+        // For repeat-one, we just restart the current track
+        audio.currentTime = 0;
+        audio.play().catch(error => {
+            console.error("Error auto-playing repeated track:", error);
+        });
+        return;
+      }
+      
       // If we are on the last track and in sequential mode, we stop.
       if (currentTrackIndex === totalTracks - 1 && playbackMode === 'sequential') {
-        // The useMusicPlayer hook already handles setting isPlaying to false
         return;
       }
       
@@ -122,6 +134,7 @@ export const usePlaylist = (tracks: Track[]): PlaylistControls => {
     currentTrackIndex,
     playbackMode,
     setPlaybackMode,
+    togglePlaybackMode,
     playNextTrack,
     playPreviousTrack,
     selectTrackByIndex,

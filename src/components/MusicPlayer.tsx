@@ -25,6 +25,7 @@ interface PlaylistControls {
   playPreviousTrack: () => void;
   playbackMode: PlaybackMode;
   setPlaybackMode: (mode: PlaybackMode) => void;
+  togglePlaybackMode: () => void; // Added new toggle function
 }
 
 interface MusicPlayerProps extends MusicPlayerControls, PlaylistControls {
@@ -53,7 +54,8 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   playNextTrack,
   playPreviousTrack,
   playbackMode,
-  setPlaybackMode,
+  // setPlaybackMode, // Removed direct use of setPlaybackMode
+  togglePlaybackMode, // Use the new toggle function
 }) => {
 
   const handleSliderSeek = (value: number[]) => {
@@ -65,10 +67,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     handleVolumeChange(value[0] / 100);
   };
   
-  const togglePlaybackMode = () => {
-    // Simple toggle between sequential and loop for now
-    setPlaybackMode(playbackMode === 'sequential' ? 'loop' : 'sequential');
+  const getModeIcon = () => {
+    switch (playbackMode) {
+      case 'loop':
+        return { Icon: Repeat, title: '列表循环', className: 'text-primary' };
+      case 'repeat-one':
+        return { Icon: Repeat1, title: '单曲循环', className: 'text-primary' };
+      case 'sequential':
+      default:
+        return { Icon: Repeat, title: '顺序播放', className: 'text-muted-foreground/70' };
+    }
   };
+  
+  const { Icon: ModeIcon, title: modeTitle, className: modeClassName } = getModeIcon();
 
   if (!track) {
     return (
@@ -114,13 +125,12 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
               size="icon" 
               className={cn(
                 "h-8 w-8 transition-colors",
-                playbackMode === 'loop' ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-primary'
+                modeClassName
               )}
               onClick={togglePlaybackMode}
-              title={playbackMode === 'loop' ? 'Loop Playlist' : 'Sequential Play'}
+              title={modeTitle}
             >
-              {/* Using Repeat icon for loop/sequential */}
-              <Repeat className="h-4 w-4" />
+              <ModeIcon className="h-4 w-4" />
             </Button>
 
             {/* Previous Track */}
