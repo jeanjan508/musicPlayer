@@ -14,8 +14,30 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertTriangle, Upload } from 'lucide-react';
 
-const Index: React.FC = () => {
+// Component to render the Upload Dialog/Button
+const UploadDialog = ({ onUploadSuccess }: { onUploadSuccess: () => void }) => {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  
+  return (
+    <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="default" className="shadow-md">
+          <Upload className="w-4 h-4 mr-2" />
+          上传曲目
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>上传新曲目</DialogTitle>
+        </DialogHeader>
+        <UploadForm onUploadSuccess={onUploadSuccess} />
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+const Index: React.FC = () => {
   const queryClient = useQueryClient();
   
   // Fetch tracks using React Query
@@ -34,11 +56,9 @@ const Index: React.FC = () => {
     playPreviousTrack, 
     playbackMode, 
     setPlaybackMode, 
-    togglePlaybackMode, // <-- ADDED: Destructure the toggle function
+    togglePlaybackMode, 
   } = usePlaylist(tracks);
 
-  // Automatically select the first track if none is selected and tracks are loaded
-  // This is now handled implicitly by usePlaylist initializing currentTrackIndex to 0.
   
   const handleSelectTrack = (track: Track) => {
     const index = tracks.findIndex(t => t.id === track.id);
@@ -55,16 +75,28 @@ const Index: React.FC = () => {
   };
   
   const handleUploadSuccess = () => {
-    // Close the dialog
-    setIsUploadDialogOpen(false);
     // Invalidate the tracks query to refetch the list, showing the new track
     queryClient.invalidateQueries({ queryKey: ['tracks'] });
   };
 
+  // --- Common Header Content ---
+  const headerContent = (
+    <header className="flex justify-between items-center pb-4 border-b border-border/50">
+      <div>
+        <h1 className="text-4xl font-extrabold tracking-tight text-primary">Music Player</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
+      </div>
+      <UploadDialog onUploadSuccess={handleUploadSuccess} />
+    </header>
+  );
+  // -----------------------------
+
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-4xl space-y-6">
+      <div className="min-h-screen bg-background flex flex-col items-center p-4">
+        <div className="w-full max-w-4xl space-y-6 pt-8">
+          {headerContent}
           <Card>
             <CardHeader><CardTitle className="text-center">Music Player</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -80,8 +112,9 @@ const Index: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-4xl space-y-6">
+      <div className="min-h-screen bg-background flex flex-col items-center p-4">
+        <div className="w-full max-w-4xl space-y-6 pt-8">
+          {headerContent} {/* Upload button is now visible here */}
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error Loading Tracks</AlertTitle>
@@ -98,28 +131,8 @@ const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center p-4 pb-32"> {/* pb-32 for player space */}
       <div className="w-full max-w-4xl space-y-8 pt-8">
-        <header className="flex justify-between items-center pb-4 border-b border-border/50">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-primary">Music Player</h1>
-            <p className="text-muted-foreground mt-1 text-sm">Synchronized lyrics powered by Cloudflare R2 & Workers.</p>
-          </div>
-          
-          {/* Upload Button */}
-          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" className="shadow-md">
-                <Upload className="w-4 h-4 mr-2" />
-                上传曲目
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>上传新曲目</DialogTitle>
-              </DialogHeader>
-              <UploadForm onUploadSuccess={handleUploadSuccess} />
-            </DialogContent>
-          </Dialog>
-        </header>
+        
+        {headerContent}
         
         {/* Lyrics Display Card */}
         <Card className="shadow-xl border-2 border-primary/10">
